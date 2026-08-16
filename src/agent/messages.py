@@ -49,7 +49,7 @@ class UserMessage:
 
         TODO(1): return the message content.
         """
-        raise NotImplementedError
+        return self.content
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,7 +70,7 @@ class AssistantMessage:
 
         TODO(1): return the message content.
         """
-        raise NotImplementedError
+        return self.content
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +93,7 @@ class ToolResultMessage:
 
         TODO(1): return the message content.
         """
-        raise NotImplementedError
+        return self.content
 
 
 # The union of every message type. Functions can accept a transcript as
@@ -109,4 +109,7 @@ def message_text(message: AgentMessage) -> str:
 
     TODO(1): return message.text for each concrete message type.
     """
-    raise NotImplementedError
+    if isinstance(message, (UserMessage, AssistantMessage, ToolResultMessage)):
+        return message.text
+    else:
+        raise NotImplementedError(f"Incorrect input type of message {message}")
