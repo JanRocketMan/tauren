@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tauren - goal and scope</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  h1, h2, h3 { line-height: 1.25; }
+  h1 { border-bottom: 2px solid #999; padding-bottom: 0.25rem; }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.92em;
+    background: rgba(128, 128, 128, 0.15);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+  pre {
+    background: rgba(128, 128, 128, 0.12);
+    padding: 0.9rem 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #888; padding: 0.4rem 0.6rem; text-align: left; }
+  th { background: rgba(128, 128, 128, 0.15); }
+  .note {
+    border-left: 4px solid #b58900;
+    background: rgba(181, 137, 0, 0.08);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0 6px 6px 0;
+  }
+  .bar {
+    background: rgba(128, 128, 128, 0.2);
+    border-radius: 6px;
+    height: 14px;
+    overflow: hidden;
+    max-width: 480px;
+  }
+  .fill { background: #2e8b57; height: 100%; }
+  a { color: #2f6fbb; }
+</style>
+</head>
+<body>
+
+<h1>Tauren</h1>
+<p>A from-scratch learning reimplementation of the Tau coding agent</p>
+
+<h2>Goal</h2>
+<p>
+This project exists so you can understand how <a href="https://github.com/huggingface/tau">Tau</a>
+works by rebuilding it yourself, one small task at a time.
+</p>
+<p>
+You do not copy Tau. You reimplement it. Each task gives you a spec, a set of
+tests, and enough concepts to write the code with your own hands. The tests
+are the contract: when they pass, the piece is done.
+</p>
+<p>
+This course follows the Feynman method: you learn by teaching. You are not
+building this for yourself only. You are building a course that others can
+follow. Every task ends with you being able to explain the piece to another
+person. If you cannot explain it, you have not learned it yet.
+</p>
+
+<h2>Scope</h2>
+<p>The target architecture mirrors Tau's three-layer split:</p>
+
+<table>
+  <tr><th>Layer</th><th>Root package</th><th>Responsibility</th></tr>
+  <tr><td>1</td><td><code>ai</code> (planned)</td><td>Provider and model streaming</td></tr>
+  <tr><td>2</td><td><code>agent</code></td><td>Portable agent harness, loop, tools, events, sessions</td></tr>
+  <tr><td>3</td><td><code>coding</code> (planned)</td><td>CLI app, resources, skills, extensions, commands, TUI</td></tr>
+</table>
+
+<p>
+Layer 2 is the reusable brain and it is the current focus. Layers 1 and 3
+plug into it later. Our <code>agent</code> package maps to Tau's
+<code>tau_agent</code>, so you can diff any finished file against
+<code>/home/ubuntu/tau/src/tau_agent/...</code> after you write it.
+</p>
+
+<p>Out of scope for now:</p>
+<ul>
+  <li>Real provider API keys and live model calls</li>
+  <li>The Textual interactive TUI</li>
+  <li>OAuth flows, cloud sessions, release tooling</li>
+</ul>
+<p>Everything above is reachable later if you want to go that far.</p>
+
+<h2>The learning loop</h2>
+<p>Every task runs through two stages, recorded as two commit types:</p>
+<ol>
+  <li><code>task:</code> commits add work. The teacher ships the spec, the
+      tests, and the code skeleton in one commit</li>
+  <li><code>done:</code> commits implement work. The learner makes the tests
+      pass and keeps every check clean in one commit</li>
+</ol>
+<p>The loop itself looks like this:</p>
+<ol>
+  <li>Read the task spec in <code>docs/task-NN.html</code>, which opens with
+      the commit it is based on</li>
+  <li>Read the "concepts" section until the pieces make sense</li>
+  <li>Implement the missing code in <code>src/</code></li>
+  <li>Run the quality gates until tests pass and checks are clean</li>
+  <li>Commit as <code>done: &lt;what you implemented&gt;</code></li>
+  <li>The teacher reviews the <code>done:</code> commit and guides you</li>
+  <li>Diff your work against the reference and read the matching phase notes</li>
+</ol>
+
+<div class="note">
+  If you get stuck for more than a few minutes, peek at the reference phase
+  notes in <code>/home/ubuntu/tau/dev-notes/architecture/</code>. They explain
+  <em>why</em> each piece exists. The current source in
+  <code>/home/ubuntu/tau/src/</code> is the last resort, and only for reading,
+  not for copying.
+</div>
+
+<h2>Quick start</h2>
+<pre><code>cd ~/tauren
+uv venv --prompt tauren
+uv sync
+uv run pytest</code></pre>
+<p>
+The <code>--prompt tauren</code> flag labels the virtual environment so the shell
+prompt shows <code>(tauren)</code> instead of <code>(.venv)</code>. It works on a fresh
+venv and on an existing one, and it keeps installed packages.
+</p>
+
+<h2>Learning Progress</h2>
+<p>Course completion by task:</p>
+<div class="bar"><div class="fill" style="width: 11%"></div></div>
+<p>1 of 9: task 01 in progress</p>
+<p>
+Line progress against the reference, module by module:
+</p>
+<pre><code>uv run python tools/progress.py</code></pre>
+<p>
+The test runner is gamified too. A green session ends with a rocket, a red
+session ends with a sad cat. The rocket means the next commit is a
+<code>done:</code> one.
+</p>
+
+<h2>Roadmap</h2>
+<p>The task list mirrors Tau's phase notes. Tasks marked done are committed.</p>
+
+<table>
+  <tr><th>Task</th><th>Content</th><th>Tau phase</th><th>Status</th></tr>
+  <tr><td><a href="task-01.html">01</a></td><td>Core types and transcript messages</td><td>Phase 1</td><td>In progress</td></tr>
+  <tr><td>02</td><td>Tools and agent events</td><td>Phase 1</td><td>Planned</td></tr>
+  <tr><td>03</td><td>Provider layer: events, protocol, fake provider</td><td>Phase 2</td><td>Planned</td></tr>
+  <tr><td>04</td><td>Pure agent loop</td><td>Phase 3</td><td>Planned</td></tr>
+  <tr><td>05</td><td>Agent harness</td><td>Phase 4</td><td>Planned</td></tr>
+  <tr><td>06</td><td>Coding tools: read, edit, write, bash</td><td>Phase 5</td><td>Planned</td></tr>
+  <tr><td>07</td><td>Print-mode CLI and event rendering</td><td>Phase 6</td><td>Planned</td></tr>
+  <tr><td>08</td><td>Session tree and persistence</td><td>Phase 7</td><td>Planned</td></tr>
+  <tr><td>09</td><td>Coding session that wires it all together</td><td>Phase 8</td><td>Planned</td></tr>
+</table>
+
+<h2>Reference map</h2>
+<ul>
+  <li>Design docs: <code>/home/ubuntu/tau/dev-notes/design/</code></li>
+  <li>Phase notes: <code>/home/ubuntu/tau/dev-notes/architecture/phase-*.md</code></li>
+  <li>Working rules: <code>AGENTS.md</code></li>
+</ul>
+
+</body>
+</html>
