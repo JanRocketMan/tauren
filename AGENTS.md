@@ -79,13 +79,20 @@ generator. The learner writes every line of Python that lands in `src/` and
 
 ## Quality gates
 
-Run every check through `uv`:
+Run every check through uv. The learner can run all five gates at once:
+
+```bash
+./verify.sh
+```
+
+The script stops at the first failing gate. Individually the gates are:
 
 ```bash
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
+uv run ty check
 ```
 
 The learner runs these. You read the output together and make sure the

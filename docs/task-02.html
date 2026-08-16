@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task 02 - tools and agent events</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  h1, h2, h3 { line-height: 1.25; }
+  h1 { border-bottom: 2px solid #999; padding-bottom: 0.25rem; }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.92em;
+    background: rgba(128, 128, 128, 0.15);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+  pre {
+    background: rgba(128, 128, 128, 0.12);
+    padding: 0.9rem 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #888; padding: 0.4rem 0.6rem; text-align: left; }
+  th { background: rgba(128, 128, 128, 0.15); }
+  .note {
+    border-left: 4px solid #b58900;
+    background: rgba(181, 137, 0, 0.08);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0 6px 6px 0;
+  }
+  .done {
+    border-left: 4px solid #2e8b57;
+    background: rgba(46, 139, 87, 0.08);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0 6px 6px 0;
+  }
+  a { color: #2f6fbb; }
+</style>
+</head>
+<body>
+
+<h1>Task 02 - tools and agent events</h1>
+<p><a href="index.html">&larr; back to the roadmap</a></p>
+
+<div class="note">
+  <strong>Based on:</strong> <code>done: implemented first task</code>
+  (commit <code>6ceffa97</code>). This task is shipped as a <code>task:</code>
+  commit; your answer is a <code>done:</code> commit. Every task doc opens
+  with the commit it is based on, and the teacher reviews each
+  <code>done:</code> commit.
+</div>
+
+<h2>Goal</h2>
+<p>
+Give the agent its two missing voices: the tools it can run and the events it
+emits while running them. By the end of this task you will be able to explain
+the executor contract behind every tool and the discriminator pattern behind
+every event, and you will have written <code>events.py</code> with your own
+hands.
+</p>
+
+<h2>Setup check</h2>
+<p>Before writing code, make sure the baseline is what the task expects:</p>
+<pre><code>cd ~/tauren
+./verify.sh</code></pre>
+<p>
+The script stops at the first red gate. That is intended now:
+<code>test_tools.py</code> fails at a <code>NotImplementedError</code> in the
+TODO(2) pieces, and <code>test_events.py</code> cannot even import
+<code>agent.events</code> because the module does not exist yet. Both failures
+are your list of work.
+</p>
+
+<h2>Concepts</h2>
+
+<h3>Two kinds of tool objects</h3>
+<p>
+Task 01 gave you <code>ToolCall</code>: what the assistant records when it asks
+for a tool. This sounds similar to an <code>AgentTool</code>, but the two are
+not the same role:
+</p>
+<pre><code>ToolCall      what the assistant asks for  (id, name, arguments)
+AgentTool     what the agent knows how to run  (name, description, schema, executor)
+AgentToolResult  what running a tool produced  (tool_call_id, name, content, ok)</code></pre>
+<p>
+The future agent loop will match each <code>ToolCall</code> to an
+<code>AgentTool</code> by name, run its executor, and convert the result into
+a <code>ToolResultMessage</code> on the transcript. That is why
+<code>AgentToolResult</code> mirrors <code>ToolResultMessage</code> without the
+timestamp: the loop stamps time when it converts, because time is a transcript
+concern, not a tool concern.
+</p>
+
+<h3>The executor contract</h3>
+<p>
+Every tool runs through the same async signature:</p>
+<pre><code>executor(tool_call_id, arguments) -&gt; AgentToolResult</code></pre>
+<p>
+The call id lets the result be matched back to the assistant's request. The
+arguments are the JSON-like values from the <code>ToolCall</code>. Tools do
+I/O, so the executor is async and the agent loop will <code>await</code> it.
+An <code>AgentTool</code> is a dataclass that carries this callable; its
+<code>execute</code> method is a thin async wrapper that delegates.
+</p>
+
+<h3>Why events exist</h3>
+<p>
+Events are how the portable agent layer reports progress without knowing who
+is listening:</p>
+<pre><code>Agent loop emits events
+        |
+        |--&gt; print-mode CLI consumes
+        |--&gt; Rich renderers consume
+        |--&gt; Textual TUI consumes
+        |--&gt; tests inspect</code></pre>
+<p>
+Later tasks build the loop and the frontends. This task builds the vocabulary
+the loop will emit and the frontends will consume: one event per moment of a
+session.
+</p>
+
+<h3>The discriminator pattern</h3>
+<p>
+Every event carries a <code>type</code> field whose value is a string literal
+that names the event. The <code>AgentEvent</code> union is the closed set of
+all events, exactly like <code>AgentMessage</code> is the closed set of
+messages. A consumer reads <code>event.type</code> via
+<code>isinstance</code> branches, the same way <code>message_text</code> in
+task 01 dispatches on message types.
+</p>
+<p>
+The pattern is deliberately repetitive:</p>
+<pre><code>@dataclass(frozen=True, slots=True)
+class AgentStartEvent:
+    """The agent run started."""
+
+    type: Literal["agent_start"] = "agent_start"</code></pre>
+<p>
+Ten small classes, one per moment, each with the same shape. Do not fight the
+repetition. It is the point: every event announces itself past a stable
+string so frontends can map type to renderer.
+</p>
+
+<h2>Your task</h2>
+<ol>
+  <li>Open <code>src/agent/tools.py</code> and read it. Feed the two
+      TODO(2) pieces: the <code>text</code> property of
+      <code>AgentToolResult</code> and the <code>execute</code> method of
+      <code>AgentTool</code></li>
+  <li>Create <code>src/agent/events.py</code> from the spec table below:
+      the ten event classes and the <code>AgentEvent</code> union. Keep the
+      frozen, slotted dataclass convention from task 01</li>
+  <li>Run the quality gates until everything is green</li>
+</ol>
+
+<h3>The event spec</h3>
+<p>Build one dataclass per row. Defaults: <code>messages</code>,
+<code>tool_results</code> and <code>args</code> default to an empty
+collection; <code>type</code> always defaults to its own literal.</p>
+
+<table>
+  <tr><th>Event</th><th>type value</th><th>Fields besides type</th></tr>
+  <tr><td><code>AgentStartEvent</code></td><td><code>agent_start</code></td><td>none</td></tr>
+  <tr><td><code>AgentEndEvent</code></td><td><code>agent_end</code></td><td><code>messages: list[AgentMessage]</code></td></tr>
+  <tr><td><code>TurnStartEvent</code></td><td><code>turn_start</code></td><td>none</td></tr>
+  <tr><td><code>TurnEndEvent</code></td><td><code>turn_end</code></td><td><code>message: AgentMessage</code>, <code>tool_results: list[ToolResultMessage]</code></td></tr>
+  <tr><td><code>MessageStartEvent</code></td><td><code>message_start</code></td><td><code>message: AgentMessage</code></td></tr>
+  <tr><td><code>MessageDeltaEvent</code></td><td><code>message_delta</code></td><td><code>text: str</code></td></tr>
+  <tr><td><code>MessageEndEvent</code></td><td><code>message_end</code></td><td><code>message: AgentMessage</code></td></tr>
+  <tr><td><code>ToolExecutionStartEvent</code></td><td><code>tool_execution_start</code></td><td><code>tool_call_id: str</code>, <code>tool_name: str</code>, <code>args: dict[str, JSONValue]</code></td></tr>
+  <tr><td><code>ToolExecutionUpdateEvent</code></td><td><code>tool_execution_update</code></td><td><code>tool_call_id: str</code>, <code>tool_name: str</code>, <code>partial_result: AgentToolResult</code></td></tr>
+  <tr><td><code>ToolExecutionEndEvent</code></td><td><code>tool_execution_end</code></td><td><code>tool_call_id: str</code>, <code>tool_name: str</code>, <code>result: AgentToolResult</code>, <code>is_error: bool</code></td></tr>
+</table>
+
+<p>Then close the set:</p>
+<pre><code>type AgentEvent = (
+    AgentStartEvent
+    | AgentEndEvent
+    | ...
+)</code></pre>
+<p>
+A future session run will produce a stream like this, and every frontend will
+read it from the same union:</p>
+<pre><code>agent_start
+turn_start
+message_start        AssistantMessage begins
+message_delta        "I'll inspect the file."
+message_end          AssistantMessage(... tool_calls=[read])
+tool_execution_start
+tool_execution_end   AgentToolResult(...)
+turn_end
+agent_end</code></pre>
+
+<div class="note">
+  The union cannot be proven by the tests alone: annotations are not checked
+  at runtime. mypy and ty will flag a misspelled class name once the module
+  exists, and the teacher reviews the union by reading it. List every event
+  from the table, not a subset.
+</div>
+
+<h3>An honest warning about <code>is_error</code></h3>
+<p>
+<code>ToolExecutionEndEvent.is_error</code> has no default. The loop must
+always know whether a tool failed. A field without a default forces the
+caller to decide. Notice how that mirrors <code>ok</code> on
+<code>ToolResultMessage</code>: defaults exist where a sensible value exists
+(success is the common case), and stay absent where forgetting to decide
+would hide a bug.
+</p>
+
+<h2>Verification</h2>
+<p>The five gates, or one script:</p>
+<pre><code>./verify.sh</code></pre>
+<p>Individually:</p>
+<pre><code>uv run pytest           # all tests green
+uv run ruff check .     # no lint errors
+uv run ruff format --check .
+uv run mypy             # no type errors
+uv run ty check         # no type errors (second checker)</code></pre>
+
+<div class="done">
+  Definition of done: the three tests in <code>tests/test_tools.py</code> and
+  the six in <code>tests/test_events.py</code> pass, and all five gates in
+  <code>./verify.sh</code> are green. Then commit with <code>jj</code> using a
+  <code>done:</code> message, and the teacher will review your commit.
+</div>
+
+<h2>Think about</h2>
+<ul>
+  <li>Why does every event carry a <code>type</code> literal instead of
+      relying on <code>isinstance</code> alone?</li>
+  <li>Why is <code>execute</code> async while <code>message_text</code> is
+      sync?</li>
+  <li>What does the <code>AgentEvent</code> union give a future frontend that
+      renders a live session?</li>
+  <li>Why is the <code>type</code> field the first field with the same name
+      in every event, and what breaks if one event forgets it?</li>
+</ul>
+
+<h2>How this maps to Tau</h2>
+<ul>
+  <li>Phase note:
+      <code>/home/ubuntu/tau/dev-notes/architecture/phase-1-core-types-and-events.md</code></li>
+  <li>Design doc:
+      <code>/home/ubuntu/tau/dev-notes/design/05-core-types-and-events.md</code></li>
+  <li>Reference implementation:
+      <code>/home/ubuntu/tau/src/tau_agent/tools.py</code> and
+      <code>/home/ubuntu/tau/src/tau_agent/events.py</code></li>
+</ul>
+<p>
+After your tests pass, diff your files against the reference. You will find
+that Tau's tools grew renderers, labels, execution modes, and cancellation,
+and its events grew several more members plus a pairing with provider
+events. Be calm. The design intent is the same; the reference just grew. We
+add fields only when a task needs them.
+</p>
+
+</body>
+</html>

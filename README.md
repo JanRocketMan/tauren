@@ -19,6 +19,14 @@ The `--prompt tauren` flag labels the virtual environment so your shell shows
 `(tauren)` instead of `(.venv)`. It works on a fresh venv and on an existing
 one, and it keeps installed packages.
 
+All five quality gates bundle into one script:
+
+```bash
+./verify.sh
+```
+
+The script stops at the first failing gate.
+
 ## How this project works
 
 - Each task lives in `docs/task-NN.html` and opens with the commit it is
@@ -38,7 +46,7 @@ See `AGENTS.md` for the working rules.
 Course completion by task:
 
 ```
-Tasks:   ░░░░░░░░░░░░░░░░░░░░   0 of 9 done (task 01 in progress)
+Tasks:   ██░░░░░░░░░░░░░░░░░░   1 of 9 done (task 02 in progress)
 ```
 
 Lines reimplemented vs the reference (`src/agent` maps to Tau's
@@ -46,13 +54,14 @@ Lines reimplemented vs the reference (`src/agent` maps to Tau's
 
 ```
   tauren course progress: lines reimplemented vs the reference
-  ------------------------------------------------------------
-  agent/messages.py             112 / 278  ██████████░░░░░░░░░░░░░░   40%
+  ----------------------------------------------------
+  agent/messages.py             115 / 278  ██████████░░░░░░░░░░░░░░   41%
+  agent/tools.py                 76 / 118  ███████████████░░░░░░░░░   64%
   agent/types.py                 11 / 8    █████████████████████████████████  138%
-  ------------------------------------------------------------
-  total                         123 / 286  ██████████░░░░░░░░░░░░░░   43%
+  ----------------------------------------------------
+  total                         202 / 404  ████████████░░░░░░░░░░░░   50%
 
-  9 test functions waiting for your implementation
+  18 test functions waiting for your implementation
 
   Line parity is not the goal. Understand each piece, then move on.
   Reference: /home/ubuntu/tau/src/tau_agent
